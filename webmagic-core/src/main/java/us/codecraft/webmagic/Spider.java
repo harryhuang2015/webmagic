@@ -6,10 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.downloader.Downloader;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
-import us.codecraft.webmagic.pipeline.CollectorPipeline;
-import us.codecraft.webmagic.pipeline.ConsolePipeline;
-import us.codecraft.webmagic.pipeline.Pipeline;
-import us.codecraft.webmagic.pipeline.ResultItemsCollectorPipeline;
+import us.codecraft.webmagic.pipeline.*;
 import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.scheduler.QueueScheduler;
 import us.codecraft.webmagic.scheduler.Scheduler;
@@ -412,12 +409,16 @@ public class Spider implements Runnable, Task {
     private void onDownloadSuccess(Request request, Page page) {
         if (site.getAcceptStatCode().contains(page.getStatusCode())){
             pageProcessor.process(page);
-            extractAndAddRequests(page, spawnUrl);
             if (!page.getResultItems().isSkip()) {
                 for (Pipeline pipeline : pipelines) {
-                    pipeline.process(page.getResultItems(), this);
+                    if (pipeline instanceof PagePipeline) {
+                        ((PagePipeline)pipeline).process(page, this);
+                    } else {
+                        pipeline.process(page.getResultItems(), this);
+                    }
                 }
             }
+            extractAndAddRequests(page, spawnUrl);
         } else {
             logger.info("page status code error, page {} , code: {}", request.getUrl(), page.getStatusCode());
         }
